@@ -1,22 +1,47 @@
-/**
- * DATABASE & STATE MANAGEMENT
+/* * 1. CLOUD DATABASE CONFIGURATION
  */
+const firebaseConfig = {
+  apiKey: "AIzaSyBmy70vkeZLD4HQFPMXXL2WZBCqPQyaCzQ",
+  authDomain: "smartstock-e691b.firebaseapp.com",
+  projectId: "smartstock-e691b",
+  storageBucket: "smartstock-e691b.appspot.com",
+  messagingSenderId: "116818389248",
+  appId: "1:116818389248:web:8f6be45e7aa7ceeeafabe5",
+  databaseURL: "https://smartstock-e691b-default-rtdb.asia-southeast1.firebasedatabase.app"
+};
+
+// Inisialisasi Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+/* * 2. DATA MANAGEMENT
+ */
+let state = {
+    inventory: [],
+    transactions: [],
+    cart: []
+};
+
 const DB_USERS = {
     "ADMIN": { pw: "Admin23", role: "admin", name: "Manager" },
     "KASIR": { pw: "Kasir23", role: "kasir", name: "Staf Kasir" },
     "GUDANG": { pw: "Gudang23", role: "gudang", name: "Staf Gudang" }
 };
 
-// State Global Aplikasi
-let state = {
-    inventory: [
-        { id: "A001", nama: "Indomie Goreng", jenis: "Makanan", stock: 100, modal: 2500, jual: 3500, spesifik: "Exp: 12/2026" },
-        { id: "B001", nama: "Aqua 600ml", jenis: "Minuman", stock: 50, modal: 2000, jual: 3000, spesifik: "Exp: 01/2027" },
-        { id: "C001", nama: "Piring Kaca Bening", jenis: "Pecah Belah", stock: 20, modal: 15000, jual: 25000, spesifik: "Bahan: Kaca Tebal" }
-    ],
-    transactions: [],
-    cart: []
-};
+/* * 3. REAL-TIME SYNCHRONIZATION
+ */
+db.ref('inventory').on('value', (snapshot) => {
+    const data = snapshot.val();
+    state.inventory = data ? Object.values(data) : [];
+    if (typeof app !== 'undefined' && app.currentUser) app.renderDashboard();
+});
+
+db.ref('transactions').on('value', (snapshot) => {
+    const data = snapshot.val();
+    state.transactions = data ? Object.values(data) : [];
+    if (typeof app !== 'undefined' && app.currentUser) app.renderDashboard();
+});
+
 
 class SmartStockApp {
     constructor() {
@@ -183,9 +208,20 @@ class SmartStockApp {
 
         let prefixSpesifik = jenis === 'Pecah Belah' ? 'Bahan: ' : 'Exp: ';
 
-        state.inventory.push({
-            id: newId, nama: nama, jenis: jenis, stock: stok, modal: modal, jual: jual, spesifik: prefixSpesifik + spesifik
-        });
+        // Kirim data ke Cloud Firebase
+db.ref('inventory/' + newId).set({
+    id: newId,
+    nama: nama,
+    jenis: jenis,
+    stock: stok,
+    modal: modal,
+    jual: jual,
+    spesifik: prefixSpesifik + spesifik
+}).then(() => {
+    alert(`Barang berhasil disimpa!\nID Barang: ${newId}`);
+}).catch((error) => {
+    alert("Gagal simpan: " + error.message);
+});
 
         alert(`Barang berhasil ditambah!\nID Barang: ${newId}`);
         this.renderDashboard(); 
