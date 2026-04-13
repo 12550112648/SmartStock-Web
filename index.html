@@ -9,22 +9,35 @@
 </head>
 <body>
 
-    <section id="login-screen" class="flex-center">
+    <section id="login-screen">
         <div class="login-card">
-            <h1>SmartStock<span>.</span></h1>
-            <p>Silakan masuk (ADMIN, KASIR, GUDANG)</p>
-            <input type="text" id="username" placeholder="USERNAME" autocomplete="off">
-            <input type="password" id="password" placeholder="PASSWORD">
-            <button onclick="app.handleLogin()" id="btn-login">Masuk Sistem</button>
+            <h1 style="margin-bottom: 5px;">SmartStock<span style="color:var(--primary)">.</span></h1>
+            <p style="font-size: 0.9rem; color: #64748b; margin-bottom: 2rem;">Silakan masuk (ADMIN, KASIR, GUDANG)</p>
+            <div class="form-group">
+                <input type="text" id="username" placeholder="Username" autocomplete="off">
+            </div>
+            <div class="form-group">
+                <input type="password" id="password" placeholder="Password (ex: Admin23)">
+            </div>
+            <p id="error-msg" class="error-text"></p>
+            <button style="width:100%" onclick="app.handleLogin()">Masuk Sistem</button>
         </div>
     </section>
 
     <section id="dashboard-screen" class="hidden">
-        </section>
+        <nav>
+            <div style="font-size: 1.2rem; font-weight: bold;">SMARTSTOCK V2</div>
+            <div style="display:flex; align-items:center; gap:15px;">
+                <span id="user-info"></span>
+                <button class="btn-danger" onclick="app.handleLogout()">Keluar</button>
+            </div>
+        </nav>
+        <div class="content" id="main-content">
+            </div>
+    </section>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-
     <script src="index.js"></script>
 </body>
 </html>
