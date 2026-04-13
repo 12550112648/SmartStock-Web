@@ -1,0 +1,325 @@
+/**
+ * DATABASE & STATE MANAGEMENT
+ */
+const DB_USERS = {
+    "ADMIN": { pw: "Admin23", role: "admin", name: "Manager" },
+    "KASIR": { pw: "Kasir23", role: "kasir", name: "Staf Kasir" },
+    "GUDANG": { pw: "Gudang23", role: "gudang", name: "Staf Gudang" }
+};
+
+// State Global Aplikasi
+let state = {
+    inventory: [
+        { id: "A001", nama: "Indomie Goreng", jenis: "Makanan", stock: 100, modal: 2500, jual: 3500, spesifik: "Exp: 12/2026" },
+        { id: "B001", nama: "Aqua 600ml", jenis: "Minuman", stock: 50, modal: 2000, jual: 3000, spesifik: "Exp: 01/2027" },
+        { id: "C001", nama: "Piring Kaca Bening", jenis: "Pecah Belah", stock: 20, modal: 15000, jual: 25000, spesifik: "Bahan: Kaca Tebal" }
+    ],
+    transactions: [],
+    cart: []
+};
+
+class SmartStockApp {
+    constructor() {
+        this.currentUser = null;
+        this.init();
+    }
+
+    init() {
+        this.toggleScreen('login-screen');
+    }
+
+    toggleScreen(id) {
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('dashboard-screen').classList.add('hidden');
+        document.getElementById(id).classList.remove('hidden');
+    }
+
+    handleLogin() {
+        const u = document.getElementById('username').value.toUpperCase();
+        const p = document.getElementById('password').value;
+        const err = document.getElementById('error-msg');
+
+        if (DB_USERS[u] && DB_USERS[u].pw === p) {
+            this.currentUser = { ...DB_USERS[u], username: u };
+            err.innerText = "";
+            this.renderDashboard();
+        } else {
+            err.innerText = "Username atau Password salah!";
+        }
+    }
+
+    handleLogout() {
+        this.currentUser = null;
+        state.cart = []; // Reset keranjang saat logout
+        this.init();
+    }
+
+    renderDashboard() {
+        this.toggleScreen('dashboard-screen');
+        document.getElementById('user-info').innerText = `${this.currentUser.name} (${this.currentUser.role.toUpperCase()})`;
+        const container = document.getElementById('main-content');
+        
+        if (this.currentUser.role === 'admin') this.viewAdmin(container);
+        else if (this.currentUser.role === 'kasir') this.viewKasir(container);
+        else this.viewGudang(container);
+    }
+
+    // ==========================================
+    // MODUL ADMIN (Profit & History)
+    // ==========================================
+    viewAdmin(el) {
+        let totalOmzet = 0;
+        let totalModal = 0;
+        state.transactions.forEach(trx => {
+            totalOmzet += trx.totalJual;
+            totalModal += trx.totalModal;
+        });
+        let totalProfit = totalOmzet - totalModal;
+
+        el.innerHTML = `
+            <h2>Dashboard Analitik Toko</h2>
+            <div class="grid-2" style="margin-bottom: 20px;">
+                <div class="summary-box" style="background: var(--primary);">
+                    <div style="font-size:0.9rem; opacity:0.8">Omzet Keseluruhan</div>
+                    <h2 style="margin:0">Rp ${totalOmzet.toLocaleString('id-ID')}</h2>
+                </div>
+                <div class="summary-box" style="background: var(--success);">
+                    <div style="font-size:0.9rem; opacity:0.8">Potensi Profit Bersih</div>
+                    <h2 style="margin:0">Rp ${totalProfit.toLocaleString('id-ID')}</h2>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>History Transaksi</h3>
+                ${state.transactions.length === 0 ? '<p>Belum ada transaksi hari ini.</p>' : `
+                <table>
+                    <thead><tr><th>ID Nota</th><th>Waktu</th><th>Item Terjual</th><th>Total Omzet</th><th>Profit</th></tr></thead>
+                    <tbody>
+                        ${state.transactions.map(t => `
+                            <tr>
+                                <td>${t.id}</td><td>${t.waktu}</td>
+                                <td>${t.items.map(i => `${i.nama} (x${i.qty})`).join('<br>')}</td>
+                                <td>Rp ${t.totalJual.toLocaleString('id-ID')}</td>
+                                <td style="color:var(--success); font-weight:bold;">+ Rp ${(t.totalJual - t.totalModal).toLocaleString('id-ID')}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>`}
+            </div>
+        `;
+    }
+
+    // ==========================================
+    // MODUL GUDANG (Input Barang & Auto ID)
+    // ==========================================
+    viewGudang(el) {
+        el.innerHTML = `
+            <h2>Manajemen Gudang</h2>
+            <div class="grid-2">
+                <div class="card">
+                    <h3>Input Barang Baru</h3>
+                    <div class="form-group">
+                        <label>Jenis Barang</label>
+                        <select id="g_jenis" onchange="app.updateGudangForm()">
+                            <option value="Makanan">Makanan (A)</option>
+                            <option value="Minuman">Minuman (B)</option>
+                            <option value="Pecah Belah">Pecah Belah (C)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Nama Barang</label>
+                        <input type="text" id="g_nama" placeholder="Contoh: Taro Snack">
+                    </div>
+                    <div class="grid-3">
+                        <div class="form-group"><label>Stok</label><input type="number" id="g_stok" value="0"></div>
+                        <div class="form-group"><label>Harga Modal</label><input type="number" id="g_modal" value="0"></div>
+                        <div class="form-group"><label>Harga Jual</label><input type="number" id="g_jual" value="0"></div>
+                    </div>
+                    <div class="form-group">
+                        <label id="label_spesifik">Tgl Kedaluwarsa (Exp)</label>
+                        <input type="text" id="g_spesifik" placeholder="Contoh: 12/2025">
+                    </div>
+                    <button class="btn-success" onclick="app.simpanBarangGudang()" style="width:100%">Simpan ke Database</button>
+                </div>
+                
+                <div class="card" style="max-height: 500px; overflow-y: auto;">
+                    <h3>Database Stok Terkini</h3>
+                    <table id="gudang_table">
+                        <thead><tr><th>ID</th><th>Nama</th><th>Stok</th><th>Harga Jual</th></tr></thead>
+                        <tbody>
+                            ${state.inventory.map(b => `<tr><td><strong>${b.id}</strong></td><td>${b.nama}<br><small style="color:gray">${b.spesifik}</small></td><td>${b.stock}</td><td>Rp ${b.jual.toLocaleString('id-ID')}</td></tr>`).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    }
+
+    updateGudangForm() {
+        const jenis = document.getElementById('g_jenis').value;
+        const label = document.getElementById('label_spesifik');
+        if (jenis === 'Pecah Belah') label.innerText = "Material / Bahan";
+        else label.innerText = "Tgl Kedaluwarsa (Exp)";
+    }
+
+    simpanBarangGudang() {
+        const jenis = document.getElementById('g_jenis').value;
+        const nama = document.getElementById('g_nama').value;
+        const stok = parseInt(document.getElementById('g_stok').value);
+        const modal = parseInt(document.getElementById('g_modal').value);
+        const jual = parseInt(document.getElementById('g_jual').value);
+        const spesifik = document.getElementById('g_spesifik').value;
+
+        if(!nama || stok <= 0 || jual <= modal) {
+            alert("Pastikan nama terisi, stok > 0, dan harga jual lebih tinggi dari modal!");
+            return;
+        }
+
+        // Logic Auto ID (A/B/C + 3 Angka)
+        let prefix = jenis === 'Makanan' ? 'A' : (jenis === 'Minuman' ? 'B' : 'C');
+        let itemsByPrefix = state.inventory.filter(i => i.id.startsWith(prefix));
+        let nextNumber = itemsByPrefix.length + 1;
+        let newId = prefix + nextNumber.toString().padStart(3, '0'); 
+
+        let prefixSpesifik = jenis === 'Pecah Belah' ? 'Bahan: ' : 'Exp: ';
+
+        state.inventory.push({
+            id: newId, nama: nama, jenis: jenis, stock: stok, modal: modal, jual: jual, spesifik: prefixSpesifik + spesifik
+        });
+
+        alert(`Barang berhasil ditambah!\nID Barang: ${newId}`);
+        this.renderDashboard(); 
+    }
+
+    // ==========================================
+    // MODUL KASIR (Panggil ID & Transaksi)
+    // ==========================================
+    viewKasir(el) {
+        let totalBelanja = state.cart.reduce((sum, item) => sum + (item.jual * item.qty), 0);
+
+        el.innerHTML = `
+            <div class="grid-2">
+                <div class="card">
+                    <h2>Terminal POS</h2>
+                    <div class="form-group" style="display:flex; gap:10px;">
+                        <input type="text" id="k_id_barang" placeholder="Ketik ID Barang (ex: A001)" style="text-transform:uppercase">
+                        <button onclick="app.cariBarangKasir()">Cari</button>
+                    </div>
+                    
+                    <div id="k_result_area" style="background:#f8fafc; padding:15px; border-radius:8px; margin-bottom:15px; display:none;">
+                        <h4 id="k_res_nama" style="margin:0 0 10px 0">Nama Barang</h4>
+                        <p style="margin:0; font-size:0.9rem">Harga: <strong id="k_res_harga"></strong> | Stok: <span id="k_res_stok"></span></p>
+                        <div style="display:flex; gap:10px; margin-top:15px;">
+                            <input type="number" id="k_qty" value="1" min="1" style="width:80px">
+                            <button class="btn-success" onclick="app.masukkanKeranjang()">+ Keranjang</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Keranjang Belanja</h2>
+                    ${state.cart.length === 0 ? '<p style="color:gray">Keranjang kosong</p>' : `
+                    <table>
+                        <thead><tr><th>Item</th><th>Qty</th><th>Subtotal</th><th>X</th></tr></thead>
+                        <tbody>
+                            ${state.cart.map((c, index) => `
+                                <tr>
+                                    <td>${c.nama}</td>
+                                    <td>${c.qty}</td>
+                                    <td>Rp ${(c.jual * c.qty).toLocaleString('id-ID')}</td>
+                                    <td><button class="btn-danger" style="padding:5px 10px" onclick="app.hapusKeranjang(${index})">X</button></td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                    <div style="margin-top:20px; font-size:1.2rem; text-align:right;">
+                        Total: <strong>Rp ${totalBelanja.toLocaleString('id-ID')}</strong>
+                    </div>
+                    <button class="btn-success" style="width:100%; margin-top:15px; font-size:1.1rem;" onclick="app.prosesTransaksi()">BAYAR SEKARANG</button>
+                    `}
+                </div>
+            </div>
+        `;
+    }
+
+    cariBarangKasir() {
+        const idInput = document.getElementById('k_id_barang').value.toUpperCase();
+        const barang = state.inventory.find(b => b.id === idInput);
+        const resArea = document.getElementById('k_result_area');
+
+        if (barang) {
+            if (barang.stock <= 0) {
+                alert("Stok barang ini sudah habis!");
+                resArea.style.display = 'none';
+                return;
+            }
+            resArea.dataset.currentId = barang.id; 
+            document.getElementById('k_res_nama').innerText = `${barang.nama} (${barang.id})`;
+            document.getElementById('k_res_harga').innerText = `Rp ${barang.jual.toLocaleString('id-ID')}`;
+            document.getElementById('k_res_stok').innerText = barang.stock;
+            document.getElementById('k_qty').max = barang.stock;
+            document.getElementById('k_qty').value = 1;
+            resArea.style.display = 'block';
+        } else {
+            alert("Barang tidak ditemukan! Pastikan ID benar (ex: A001, B001)");
+            resArea.style.display = 'none';
+        }
+    }
+
+    masukkanKeranjang() {
+        const id = document.getElementById('k_result_area').dataset.currentId;
+        const qty = parseInt(document.getElementById('k_qty').value);
+        const barang = state.inventory.find(b => b.id === id);
+
+        if (qty > barang.stock) { alert("Kuantitas melebihi stok tersedia!"); return; }
+
+        let cartItem = state.cart.find(c => c.id === id);
+        if (cartItem) {
+            if (cartItem.qty + qty > barang.stock) { alert("Kuantitas total di keranjang melebihi stok gudang!"); return; }
+            cartItem.qty += qty;
+        } else {
+            state.cart.push({ ...barang, qty: qty });
+        }
+        
+        document.getElementById('k_id_barang').value = ""; 
+        this.renderDashboard(); 
+    }
+
+    hapusKeranjang(index) {
+        state.cart.splice(index, 1);
+        this.renderDashboard();
+    }
+
+    prosesTransaksi() {
+        let totalJual = 0;
+        let totalModal = 0;
+
+        // Proses pengurangan stok dan rekap harga
+        state.cart.forEach(c => {
+            let inventoryItem = state.inventory.find(i => i.id === c.id);
+            inventoryItem.stock -= c.qty; 
+            
+            totalJual += (c.jual * c.qty);
+            totalModal += (c.modal * c.qty);
+        });
+
+        // Simpan Log untuk Admin
+        const date = new Date();
+        const notaId = "TRX-" + Math.floor(Math.random() * 10000);
+        
+        state.transactions.push({
+            id: notaId,
+            waktu: `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`,
+            items: [...state.cart],
+            totalJual: totalJual,
+            totalModal: totalModal
+        });
+
+        alert(`Transaksi Sukses!\nKembalikan ke pelanggan jika ada sisa.\nTotal: Rp ${totalJual.toLocaleString('id-ID')}`);
+        state.cart = []; // Reset keranjang
+        this.renderDashboard(); // Refresh UI
+    }
+}
+
+// Menjalankan Aplikasi
+const app = new SmartStockApp();

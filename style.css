@@ -1,0 +1,84 @@
+:root { 
+    --primary: #2563eb; 
+    --dark: #0f172a; 
+    --light: #f1f5f9; 
+    --danger: #ef4444; 
+    --success: #22c55e; 
+}
+
+body { 
+    margin: 0; 
+    font-family: 'Poppins', sans-serif; 
+    background: var(--light); 
+    color: var(--dark); 
+}
+
+.hidden { display: none !important; }
+
+/* Layout */
+#login-screen { height: 100vh; display: flex; justify-content: center; align-items: center; }
+.login-card { 
+    background: white; 
+    padding: 2.5rem; 
+    border-radius: 1.5rem; 
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1); 
+    width: 100%; 
+    max-width: 400px; 
+    text-align: center; 
+}
+
+nav { 
+    background: var(--dark); 
+    color: white; 
+    padding: 1rem 2rem; 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+}
+
+.content { padding: 2rem; max-width: 1200px; margin: 0 auto; }
+.card { 
+    background: white; 
+    padding: 1.5rem; 
+    border-radius: 12px; 
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05); 
+    margin-bottom: 1.5rem; 
+}
+
+/* Form & Inputs */
+.form-group { margin-bottom: 1rem; text-align: left; }
+label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 5px; }
+input, select { 
+    width: 100%; 
+    padding: 10px; 
+    border: 1px solid #cbd5e1; 
+    border-radius: 6px; 
+    box-sizing: border-box; 
+    font-family: inherit; 
+}
+
+button { 
+    background: var(--primary); 
+    color: white; 
+    border: none; 
+    padding: 10px 15px; 
+    border-radius: 6px; 
+    cursor: pointer; 
+    font-weight: 600; 
+    transition: 0.2s; 
+}
+button:hover { opacity: 0.9; }
+.btn-danger { background: var(--danger); }
+.btn-success { background: var(--success); }
+
+.error-text { color: var(--danger); font-size: 0.8rem; min-height: 1.2rem; margin-bottom: 1rem;}
+
+/* Tables */
+table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: 0.9rem; }
+th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+th { background: #f8fafc; }
+
+/* Grid Layouts */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+.summary-box { padding: 1.5rem; border-radius: 8px; color: white; }
